@@ -1,0 +1,103 @@
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+D = 1000.0
+P0 = -30.0
+n = 3.5
+SIGMA = 4.0
+V = 10.0
+
+def run(H, rng, step=0.5):
+    serving = 0
+    handoffs = 0
+    pingpong = 0
+    last_t = -99
+    last_from = None
+    first_pos = None
+
+    for t in np.arange(0, D / V, step):
+        x = V * t
+
+        p1 = P0 - 10 * n * np.log10(max(abs(x), 1)) + rng.normal(0, SIGMA)
+        p2 = P0 - 10 * n * np.log10(max(abs(x - D), 1)) + rng.normal(0, SIGMA)
+
+        p = [p1, p2]
+        new = 1 - serving
+
+        if p[new] > p[serving] + H:
+            if last_from == new and t - last_t < 10:
+                pingpong += 1
+
+            handoffs += 1
+            last_from = serving
+            last_t = t
+            serving = new
+
+            if first_pos is None:
+                first_pos = x
+
+    return handoffs, pingpong, first_pos
+
+# Main simulation
+runs = 300
+H_values = [0, 2, 4, 6, 8, 10]
+
+rng = np.random.default_rng(1)
+
+mean_handoffs = []
+mean_pingpong = []
+mean_positions = []
+
+print("MOBILE HANDOFF SIMULATION")
+print("\nH(dB)   Handoffs   Ping-pong   First Handoff(m)")
+
+for H in H_values:
+    results = [run(H, rng) for _ in range(runs)]
+
+    ho = np.mean([r[0] for r in results])
+    pp = np.mean([r[1] for r in results])
+
+    positions = [r[2] for r in results if r[2] is not None]
+    pos = np.mean(positions) if positions else 0
+
+    mean_handoffs.append(ho)
+    mean_pingpong.append(pp)
+    mean_positions.append(pos)
+
+    print(f"{H:<8}{ho:<11.2f}{pp:<12.2f}{pos:.0f}")
+
+# Graph 1: Handoffs vs Hysteresis
+plt.figure(figsize=(8, 5))
+plt.plot(H_values, mean_handoffs, marker='o', label="Handoffs")
+plt.plot(H_values, mean_pingpong, marker='s', label="Ping-pong")
+plt.xlabel("Hysteresis (dB)")
+plt.ylabel("Number of Handoffs")
+plt.title("Handoffs vs Hysteresis")
+plt.legend()
+plt.grid()
+plt.show()
+
+# Graph 2: Handoff position vs Hysteresis
+plt.figure(figsize=(8, 5))
+plt.plot(H_values, mean_positions, marker='o')
+plt.xlabel("Hysteresis (dB)")
+plt.ylabel("First Handoff Position (m)")
+plt.title("Handoff Position vs Hysteresis")
+plt.grid()
+plt.show()
+
+# Graph 3: Received Signal Strength
+x_values = np.arange(1, 1000, 5)
+p1 = P0 - 10 * n * np.log10(x_values)
+p2 = P0 - 10 * n * np.log10(1000 - x_values)
+
+plt.figure(figsize=(8, 5))
+plt.plot(x_values, p1, label="Base Station 1")
+plt.plot(x_values, p2, label="Base Station 2")
+plt.xlabel("Mobile Position (m)")
+plt.ylabel("Received Signal Strength (dBm)")
+plt.title("Signal Strength vs Mobile Position")
+plt.legend()
+plt.grid()
+plt.show()
