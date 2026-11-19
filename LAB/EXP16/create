@@ -1,0 +1,78 @@
+
+import math
+import matplotlib.pyplot as plt
+
+def fspl_db(d_km, f_mhz):
+    return 32.44 + 20 * math.log10(d_km) + 20 * math.log10(f_mhz)
+
+# Input values
+frequency = float(input("Enter frequency (MHz): "))
+tx_power = float(input("Enter transmitter power (dBm): "))
+tx_gain = float(input("Enter transmitter antenna gain (dBi): "))
+rx_gain = float(input("Enter receiver antenna gain (dBi): "))
+sensitivity = float(input("Enter receiver sensitivity (dBm): "))
+
+# Distance values
+distances = [i * 0.1 for i in range(1, 101)]
+
+fspl_values = []
+received_values = []
+
+# Calculate FSPL and received power
+for d in distances:
+    loss = fspl_db(d, frequency)
+    received = tx_power + tx_gain + rx_gain - loss
+
+    fspl_values.append(loss)
+    received_values.append(received)
+
+# Calculate maximum range
+max_fspl = tx_power + tx_gain + rx_gain - sensitivity
+
+max_range = 10 ** (
+    (max_fspl - 32.44 - 20 * math.log10(frequency)) / 20
+)
+
+print("\n--- RADIO LINK RESULTS ---")
+print("Frequency:", frequency, "MHz")
+print("Maximum FSPL:", round(max_fspl, 2), "dB")
+print("Maximum Range:", round(max_range, 3), "km")
+
+print("\nDistance(km)   FSPL(dB)   Received Power(dBm)")
+for i in range(0, len(distances), 10):
+    print(distances[i], round(fspl_values[i], 2),
+          round(received_values[i], 2))
+
+# Graph 1: FSPL vs Distance
+plt.figure(figsize=(8, 5))
+plt.plot(distances, fspl_values)
+plt.xlabel("Distance (km)")
+plt.ylabel("FSPL (dB)")
+plt.title("Free Space Path Loss vs Distance")
+plt.grid()
+plt.show()
+
+# Graph 2: Received Power vs Distance
+plt.figure(figsize=(8, 5))
+plt.plot(distances, received_values)
+plt.axhline(y=sensitivity, linestyle='--', label="Receiver Sensitivity")
+plt.xlabel("Distance (km)")
+plt.ylabel("Received Power (dBm)")
+plt.title("Received Power vs Distance")
+plt.legend()
+plt.grid()
+plt.show()
+
+# Graph 3: FSPL vs Frequency
+frequencies = [i * 100 for i in range(1, 21)]
+frequency_losses = [
+    fspl_db(1, f) for f in frequencies
+]
+
+plt.figure(figsize=(8, 5))
+plt.plot(frequencies, frequency_losses)
+plt.xlabel("Frequency (MHz)")
+plt.ylabel("FSPL (dB)")
+plt.title("FSPL vs Frequency (at 1 km)")
+plt.grid()
+plt.show()
